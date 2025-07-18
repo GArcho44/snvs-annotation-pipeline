@@ -1,4 +1,4 @@
-# Snakemake workflow: `<name>`
+# Snakemake workflow: `<microbioal-snvs-annotation-pipeline>`
 
 [![Snakemake](https://img.shields.io/badge/snakemake-≥8.0.0-brightgreen.svg)](https://snakemake.github.io)
 [![GitHub actions status](https://github.com/GArcho44/snvs-annotation-pipeline/workflows/Tests/badge.svg?branch=main)](https://github.com/GArcho44/snvs-annotation-pipeline/actions?query=branch%3Amain+workflow%3ATests)
@@ -7,7 +7,7 @@
 
 A Snakemake workflow for `<description>`
 
-- [Snakemake workflow: `<name>`](#snakemake-workflow-name)
+- [Snakemake workflow: `<microbial-snvs-annotation-pipeline>`](#snakemake-workflow-name)
   - [Usage](#usage)
   - [Deployment options](#deployment-options)
   - [Authors](#authors)
@@ -52,7 +52,7 @@ snakemake --cores 2 --sdm conda apptainer --directory .test
 
 ## Authors
 
-- Firstname Lastname
+- Archontis Goumagias
   - Affiliation
   - ORCID profile
   - home page
