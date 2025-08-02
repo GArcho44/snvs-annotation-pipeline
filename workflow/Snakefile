@@ -34,7 +34,7 @@ rule diamond_blastp_afdb:
         results=f"data/blastp/{config['species']}/blastp_afdb_top1.m8"
     log:
         f"logs/{config['species']}/diamond_blastp_afdb.log"
-    threads: config.get("diamond_threads", 8)
+    threads: 8
     conda:
         "envs/diamond.yaml"
     shell:
@@ -57,7 +57,7 @@ rule diamond_blastp_esm:
         results=f"data/blastp/{config['species']}/blastp_esm_top1.m8"
     log:
         f"logs/{config['species']}/diamond_blastp_esm.log"
-    threads: config.get("diamond_threads", 8)
+    threads: 8
     conda:
         "envs/diamond.yaml"
     shell:
