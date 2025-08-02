@@ -1,0 +1,9 @@
+name: dssp_env
+channels:
+  - salilab
+  - conda-forge
+  - defaults
+dependencies:
+  - salilab:dssp
+
+

@@ -1,0 +1,13 @@
+name: python_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.9
+  - biopython
+  - requests
+  - matplotlib
+  - threadpoolctl  # For parallel execution with ThreadPoolExecutor
+  - pandas
+  - numpy

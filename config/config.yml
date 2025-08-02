@@ -1,8 +1,11 @@
-samplesheet: ".test/config/samples.tsv"
+species: # specify species code 
 
-get_genome:
-  ncbi_ftp: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/146/045/GCF_000146045.2_R64/GCF_000146045.2_R64_genomic.fna.gz
+snvs_annotation: # specify snvs annotation file location
 
-simulate_reads:
-  read_length: 100
-  read_number: 10000
+genes_annotation: # specify genes annotation file location
+
+protein_db: # specify translated protein seuquence fasta file location 
+
+afdb_diamond_db: # specify afdb diamond database file location
+
+esm_diamond_db: # specify esm database file location

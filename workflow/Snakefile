@@ -1,37 +1,284 @@
-# Main entrypoint of the workflow.
-# Please follow the best practices:
-# https://snakemake.readthedocs.io/en/stable/snakefiles/best_practices.html,
-# in particular regarding the standardized folder structure mentioned there.
+configfile: "../config/config.yml"
 
 
-# load configuration
-# -----------------------------------------------------
-configfile: "config/config.yml"
-
-
-# load rules
-# -----------------------------------------------------
-include: "rules/common.smk"
-include: "rules/process_reads.smk"
-
-
-# optional messages, log and error handling
-# -----------------------------------------------------
-onstart:
-    print("\n--- Analysis started ---\n")
-
-
-onsuccess:
-    print("\n--- Workflow finished! ---\n")
-
-
-onerror:
-    print("\n--- An error occurred! ---\n")
-
-
-# target rules
-# -----------------------------------------------------
 rule all:
     input:
-        "results/multiqc/multiqc_report.html",
-    default_target: True
+        f"data/dtppi/{config['species']}_all_interface_distances.csv",
+        f"data/dtl/{config['species']}_fpocket_dtl_combined.csv"
+
+
+
+
+rule filter_species_snvs:
+    input:
+        snvs_tsv=config["snvs_annotation"],
+        genes_tsv=config["genes_annotation"],
+        protein_fasta=config["protein_db"]
+    output:
+        snvs_list=f"data/species_info/{config["species"]}/snv_ids.txt",
+        genes_list=f"data/species_info/{config["species"]}/gene_ids.txt",
+        snv_annotated=f"data/species_info/{config['species']}/snv_annotated.tsv",
+        gene_annotated=f"data/species_info/{config['species']}/gene_annotated.tsv",
+        protein_fasta_filtered=f"data/species_info/{config['species']}/protein_sequences.fasta"
+    conda:
+        "envs/python_env.yaml"
+    script:
+        "scripts/species_info_filter.py"
+
+
+rule diamond_blastp_afdb:
+    input:
+        db=config["afdb_diamond_db"],
+        query=f"data/species_info/{config['species']}/protein_sequences.fasta"
+    output:
+        results=f"data/blastp/{config['species']}/blastp_afdb_top1.m8"
+    log:
+        f"logs/{config['species']}/diamond_blastp_afdb.log"
+    threads: config.get("diamond_threads", 8)
+    conda:
+        "envs/diamond.yaml"
+    shell:
+        """
+        mkdir -p logs/{config[species]} &&
+        diamond blastp \
+            -d {input.db} \
+            -q {input.query} \
+            -o {output.results} \
+            --threads {threads} \
+            --max-target-seqs 1 \
+            --fast 2> {log}
+        """
+
+
+rule diamond_blastp_esm:
+    input:
+        db=config["esm_diamond_db"],
+        query=f"data/species_info/{config['species']}/protein_sequences.fasta"
+    output:
+        results=f"data/blastp/{config['species']}/blastp_esm_top1.m8"
+    log:
+        f"logs/{config['species']}/diamond_blastp_esm.log"
+    threads: config.get("diamond_threads", 8)
+    conda:
+        "envs/diamond.yaml"
+    shell:
+        """
+        mkdir -p logs/{config[species]} &&
+        diamond blastp \
+            -d {input.db} \
+            -q {input.query} \
+            -o {output.results} \
+            --threads {threads} \
+            --max-target-seqs 1 \
+            --fast 2> {log}
+        """
+
+
+rule blast_results_processing:
+    input:
+        afdb_blast=f"data/blastp/{config['species']}/blastp_afdb_top1.m8",
+        esm_blast=f"data/blastp/{config['species']}/blastp_esm_top1.m8",
+        gene_annotation=f"data/species_info/{config['species']}/gene_annotated.tsv"
+    output:
+        afdb_ids=f"data/protein_ids/{config['species']}/afdb_ids.txt",
+        esm_ids=f"data/protein_ids/{config['species']}/esm_ids.txt",
+        combined=f"data/protein_ids/{config['species']}/combined_mapping.tsv",
+        method_plot=f"data/reports/{config['species']}/blastp/method_distribution.png"
+    conda:
+        "envs/python_env.yaml"
+    script:
+        "scripts/blastp_results_filter.py"
+
+
+rule download_afdb_models:
+    input:
+        ids=f"data/protein_ids/{config['species']}/afdb_ids.txt"
+    output:
+        structures_dir=directory(f"data/structures_raw/{config['species']}/afdb"),
+        report_dir=directory(f"data/reports/{config['species']}/afdb_report")
+    params:
+        threshold=config.get("plddt_threshold", 80)  # default 80
+    conda:
+        "envs/python_env.yaml"
+    script:
+        "scripts/download_structures_afdb_api.py"
+
+
+rule download_esm_models:
+    input:
+        ids=f"data/protein_ids/{config['species']}/esm_ids.txt"
+    output:
+        structures_dir=directory(f"data/structures_raw/{config['species']}/esm"),
+        report_dir=directory(f"data/reports/{config['species']}/esm_report")
+    params:
+        threshold=config.get("plddt_threshold", 80)  # default 80
+    conda:
+        "envs/python_env.yaml"
+    script:
+        "scripts/download_afdb_models.py"
+
+
+rule merge_structures:
+    input:
+        afdb_dir=f"data/structures_raw/{config['species']}/afdb",
+        esm_dir=f"data/structures_raw/{config['species']}/esm"
+    output:
+        merged_dir=directory(f"data/structures/{config['species']}")
+    shell:
+        """
+        mkdir -p {output.merged_dir}
+        mv {input.afdb_dir}/* {output.merged_dir}/ || true
+        mv {input.esm_dir}/* {output.merged_dir}/ || true
+        ""
+
+
+rule dssp:
+    input:
+        structures_dir=f"data/structures/{config['species']}"
+    output:
+        dssp_dir=directory(f"data/dssp_output/{config['species']}"),
+    conda:
+        "envs/dssp_env.yaml"
+    log:
+        "logs/dssp.log"
+    script:
+        "scripts/dssp_generator.py"
+
+
+rule rsa_calculation:
+    input:
+        dssp_dir=f"data/dssp_output/{config['species']}"
+    output:
+        rsa=f"data/rsa_output/{config['species']}/res_rsa.csv"
+    conda:
+        "envs/python_env.yaml"
+    log:
+        "logs/rsa_calc.log"
+    script:
+        "scripts/rsa_calculator.py"
+
+rule create_structures_list:
+    input:
+        structures_dir=f"data/structures/{config['species']}"
+    output:
+        structures_list="tools/p2rank_2.5/structures_list"
+    log:
+        "logs/create_structures_list.log"
+    shell:
+        """
+        find {input.structures_dir} -name "*.pdb" | sed 's|^|../../|' > {output.structures_list}
+        """
+
+
+rule p2rank_prediction:
+    input:
+        structures_list="tools/p2rank_2.5/structures_list"
+    output:
+        predictions_dir=directory(f"data/p2rank_output/{config['species']}")
+    params:
+        p2rank_dir="tools/p2rank_2.5",
+        threads=32
+    log:
+        "logs/p2rank.log"
+    shell:
+        """
+        # Load Java module from HPC
+        module load Java/21.0.2
+
+        # Run P2Rank using the corrected path for the structures list
+        cd {params.p2rank_dir} && \
+        ./prank predict structures_list \
+	-visualizations 0 -threads {params.threads} -o ../../{output.predictions_dir}
+        """
+
+
+rule fpocket_prediction:
+    input:
+        structures_list="tools/p2rank_2.5/structures_list"
+    output:
+        predictions_dir=directory(f"data/fpocket_output/{config['species']}")
+    params:
+        p2rank_dir="tools/p2rank_2.5",
+        threads=32
+    conda:
+        "envs/fpocket_env.yaml"
+    log:
+        "logs/fpocket_res.log"
+    shell:
+        """
+        # Load Java module from HPC
+        module load Java/21.0.2
+
+        # Run fpocket and PRANK rescore
+        cd {params.p2rank_dir} && \
+        ./prank fpocket-rescore structures_list \
+        -fpocket_keep_output 0 -visualizations 0 -threads 32 -o ../../{output.predictions_dir}
+        """
+
+
+rule predictions_merger:
+    input:
+        p2rank_dir=f"data/p2rank_output/{config['species']}",
+        fpocket_dir=f"data/fpocket_output/{config['species']}"
+    output:
+        merged_data=f"data/bs_predictions_output/{config['species']}/final_merged_predictions.csv"
+    conda:
+        "envs/python_env.yaml"
+    script:
+        "scripts/predictions_merger.py"
+
+
+rule pesto_prediction:
+    input:
+        structures=f"data/structures/{config['species']}"
+    output:
+        predictions_dir=directory(f"data/PeSTo_output/{config['species']}")
+    params:
+        pesto_dir="tools/PeSTo"
+    conda:
+        "envs/pesto_env.yaml"
+    log:
+        "logs/pesto.log"
+    shell:
+        """
+        # Run PeSTo for PPI predictions
+        cd {params.pesto_dir} && \
+        python apply_model.py
+        """
+
+
+rule ppi_scores_merger:
+    input:
+        pesto_dir=f"data/PeSTo_output/{config['species']}"
+    output:
+        merged_data=f"data/ppi_predictions_output/{config['species']}/ppi_final_predictions.csv"
+    conda:
+        "envs/python_env.yaml"
+    script:
+        "scripts/ppi_merger.py"
+
+
+rule dtl_calculation:
+    input:
+        structures_dir=f"data/structures/{config['species']}",
+        fpocket_dir=f"data/fpocket_output/{config['species']}"
+    output:
+        dtl_dir=f"data/dtl/{config['species']}",
+        dtl_combined=f"data/dtl/{config['species']}_fpocket_dtl_combined.csv"
+    conda:
+        "envs/python_env.yaml"
+    script:
+        "scripts/dtl-calculator.py"
+
+
+rule dtppi_calculation:
+    input:
+        structures_dir=f"data/structures/{config['species']}",
+        pesto_pred=f"data/ppi_predictions_output/{config['species']}/ppi_final_predictions.csv"
+    output:
+        sum_dir=f"data/reports/{config['species']}/dtppi_summary",
+        dtppi_combined=f"data/dtppi/{config['species']}_all_interface_distances.csv"
+    conda:
+        "envs/python_env.yaml"
+    script:
+        "scripts/dtppi-calculator.py"
