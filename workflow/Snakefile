@@ -62,7 +62,6 @@ rule diamond_blastp_esm:
         "envs/diamond.yaml"
     shell:
         """
-        mkdir -p logs/{config[species]} &&
         diamond blastp \
             -d {input.db} \
             -q {input.query} \
