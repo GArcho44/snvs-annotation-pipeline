@@ -9,12 +9,11 @@ def parse_fpocket_centers(file_path):
                "center_x", "center_y", "center_z", "residue_ids", "surf_atom_ids"]
     df = pd.read_csv(file_path, names=headers, skiprows=1)
 
-    centers = []
-    for _, row in df.iterrows():
-        if float(row['probability']) > 0.5:
-            center = np.array([float(row['center_x']), float(row['center_y']), float(row['center_z'])])
-            centers.append(center)
-    return centers
+    # keep confident pockets only
+    df = df[df["probability"].astype(float) > 0.5].reset_index(drop=True)
+
+    centers = df[["center_x", "center_y", "center_z"]].astype(float).values
+    return centers, df
 
 def get_sidechain_center(residue):
     sidechain_atoms = [atom for atom in residue if atom.get_name() not in ["N", "CA", "C", "O"]]
@@ -41,7 +40,7 @@ def calculate_dtl(protein_id, pdb_path, fpocket_path, output_path):
     all_coords, all_residues = extract_structure_coords(pdb_path)
 
     # Use only Fpocket pocket centers with probability > 0.5
-    binding_coords = parse_fpocket_centers(fpocket_path)
+    binding_coords, pocket_df = parse_fpocket_centers(fpocket_path)
     if len(binding_coords) == 0:
         binding_coords = np.empty((0, 3))
     else:
@@ -51,7 +50,9 @@ def calculate_dtl(protein_id, pdb_path, fpocket_path, output_path):
     raw_distances = []
     for res_id, coord in zip(all_residues, all_coords):
         if len(binding_coords) > 0:
-            dtl = np.min(np.linalg.norm(binding_coords - coord, axis=1))
+            distances = np.linalg.norm(binding_coords - coord, axis=1)
+            dtl = np.min(distances)
+            idx = int(np.argmin(distances))  # nearest pocket index
             raw_distances.append((res_id, dtl))
         else:
             continue
@@ -59,10 +60,21 @@ def calculate_dtl(protein_id, pdb_path, fpocket_path, output_path):
         max_dist = max(d for _, d in raw_distances)
 
         norm_dtl = dtl / max_dist if max_dist > 0 else 0.0
-        dtl_list.append((protein_id, res_id[0], res_id[1], dtl, norm_dtl))
+
+        pocket_row = pocket_df.iloc[idx]  # pocket metadata
+
+        dtl_list.append((
+            protein_id,
+            res_id[0],
+            res_id[1],
+            dtl,
+            norm_dtl,
+            *pocket_row.tolist()  # keep pocket metadata
+        ))
 
     if dtl_list:
-        df = pd.DataFrame(dtl_list, columns=["protein_id", "chain_id", "residue_id", "DTL", "normalized_DTL"])
+        base_cols = ["protein_id", "chain_id", "residue_id", "DTL", "normalized_DTL"]
+        df = pd.DataFrame(dtl_list, columns=base_cols + pocket_df.columns.tolist())
         return df
     else:
         return None

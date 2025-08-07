@@ -8,7 +8,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("pesto_conversion.log"),
+        logging.FileHandler("logs/pesto_conversion.log"),
         logging.StreamHandler()
     ]
 )

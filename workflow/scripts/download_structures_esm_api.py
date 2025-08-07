@@ -4,14 +4,26 @@ import os
 # === Configuration ===
 input_file = snakemake.input.ids  # Your text file with MGYP IDs
 output_folder = snakemake.output.structures_dir
-plddt_output_file = snakemake.output.plddt_scores  # New file for pLDDT scores
+report_dir = snakemake.output.report_dir  # Folder for pLDDT scores file
 plddt_threshold = snakemake.params.plddt_threshold  # Keep this as a float (0–1 scale)
 
 os.makedirs(output_folder, exist_ok=True)
 
+plddt_output_file = os.path.join(report_dir, "pLDDT_scores.tsv")
+
 # Load IDs
 with open(input_file, "r") as f:
     mgyp_ids = [line.strip() for line in f if line.strip()]
+
+# Early exit if no IDs
+if not mgyp_ids:
+    message = "[INFO] No ESM/MGnify IDs found. Skipping download step."
+    print(message)
+    # Create empty pLDDT report so downstream rules don't fail
+    os.makedirs(os.path.dirname(plddt_output_file), exist_ok=True)
+    with open(plddt_output_file, "w") as pf:
+        pf.write("MGYP_ID\tResidue_Index\tpLDDT\tAverage_pLDDT\n")
+    sys.exit(0)
 
 # Create / overwrite pLDDT scores file
 with open(plddt_output_file, "w") as pf:

@@ -5,5 +5,5 @@ channels:
   - defaults
 dependencies:
   - salilab:dssp
-
+  - libboost=1.73.0
 

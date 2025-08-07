@@ -4,9 +4,8 @@ configfile: "../config/config.yml"
 rule all:
     input:
         f"data/dtppi/{config['species']}_all_interface_distances.csv",
-        f"data/dtl/{config['species']}_fpocket_dtl_combined.csv"
-
-
+        f"data/dtl/{config['species']}_fpocket_dtl_combined.csv",
+        f"data/rsa_output/{config['species']}/res_rsa.csv"
 
 
 rule filter_species_snvs:
@@ -15,8 +14,8 @@ rule filter_species_snvs:
         genes_tsv=config["genes_annotation"],
         protein_fasta=config["protein_db"]
     output:
-        snvs_list=f"data/species_info/{config["species"]}/snv_ids.txt",
-        genes_list=f"data/species_info/{config["species"]}/gene_ids.txt",
+        snvs_list=f"data/species_info/{config['species']}/snv_ids.txt",
+        genes_list=f"data/species_info/{config['species']}/gene_ids.txt",
         snv_annotated=f"data/species_info/{config['species']}/snv_annotated.tsv",
         gene_annotated=f"data/species_info/{config['species']}/gene_annotated.tsv",
         protein_fasta_filtered=f"data/species_info/{config['species']}/protein_sequences.fasta"
@@ -24,7 +23,6 @@ rule filter_species_snvs:
         "envs/python_env.yaml"
     script:
         "scripts/species_info_filter.py"
-
 
 rule diamond_blastp_afdb:
     input:
@@ -48,7 +46,6 @@ rule diamond_blastp_afdb:
             --fast 2> {log}
         """
 
-
 rule diamond_blastp_esm:
     input:
         db=config["esm_diamond_db"],
@@ -71,7 +68,6 @@ rule diamond_blastp_esm:
             --fast 2> {log}
         """
 
-
 rule blast_results_processing:
     input:
         afdb_blast=f"data/blastp/{config['species']}/blastp_afdb_top1.m8",
@@ -87,7 +83,6 @@ rule blast_results_processing:
     script:
         "scripts/blastp_results_filter.py"
 
-
 rule download_afdb_models:
     input:
         ids=f"data/protein_ids/{config['species']}/afdb_ids.txt"
@@ -101,7 +96,6 @@ rule download_afdb_models:
     script:
         "scripts/download_structures_afdb_api.py"
 
-
 rule download_esm_models:
     input:
         ids=f"data/protein_ids/{config['species']}/esm_ids.txt"
@@ -109,12 +103,11 @@ rule download_esm_models:
         structures_dir=directory(f"data/structures_raw/{config['species']}/esm"),
         report_dir=directory(f"data/reports/{config['species']}/esm_report")
     params:
-        threshold=config.get("plddt_threshold", 80)  # default 80
+        plddt_threshold=config.get("plddt_threshold", 80)  # default 80
     conda:
         "envs/python_env.yaml"
     script:
-        "scripts/download_afdb_models.py"
-
+        "scripts/download_structures_esm_api.py"
 
 rule merge_structures:
     input:
@@ -127,8 +120,7 @@ rule merge_structures:
         mkdir -p {output.merged_dir}
         mv {input.afdb_dir}/* {output.merged_dir}/ || true
         mv {input.esm_dir}/* {output.merged_dir}/ || true
-        ""
-
+        """
 
 rule dssp:
     input:
@@ -141,7 +133,6 @@ rule dssp:
         "logs/dssp.log"
     script:
         "scripts/dssp_generator.py"
-
 
 rule rsa_calculation:
     input:
@@ -167,7 +158,6 @@ rule create_structures_list:
         find {input.structures_dir} -name "*.pdb" | sed 's|^|../../|' > {output.structures_list}
         """
 
-
 rule p2rank_prediction:
     input:
         structures_list="tools/p2rank_2.5/structures_list"
@@ -188,7 +178,6 @@ rule p2rank_prediction:
         ./prank predict structures_list \
 	-visualizations 0 -threads {params.threads} -o ../../{output.predictions_dir}
         """
-
 
 rule fpocket_prediction:
     input:
@@ -213,7 +202,6 @@ rule fpocket_prediction:
         -fpocket_keep_output 0 -visualizations 0 -threads 32 -o ../../{output.predictions_dir}
         """
 
-
 rule predictions_merger:
     input:
         p2rank_dir=f"data/p2rank_output/{config['species']}",
@@ -224,7 +212,6 @@ rule predictions_merger:
         "envs/python_env.yaml"
     script:
         "scripts/predictions_merger.py"
-
 
 rule pesto_prediction:
     input:
@@ -241,9 +228,8 @@ rule pesto_prediction:
         """
         # Run PeSTo for PPI predictions
         cd {params.pesto_dir} && \
-        python apply_model.py
+        python apply_model.py ../../{input.structures} ../../{output.predictions_dir}
         """
-
 
 rule ppi_scores_merger:
     input:
@@ -255,28 +241,42 @@ rule ppi_scores_merger:
     script:
         "scripts/ppi_merger.py"
 
-
 rule dtl_calculation:
     input:
         structures_dir=f"data/structures/{config['species']}",
         fpocket_dir=f"data/fpocket_output/{config['species']}"
     output:
-        dtl_dir=f"data/dtl/{config['species']}",
+        dtl_dir=directory(f"data/dtl/{config['species']}"),
         dtl_combined=f"data/dtl/{config['species']}_fpocket_dtl_combined.csv"
     conda:
         "envs/python_env.yaml"
     script:
-        "scripts/dtl-calculator.py"
-
+        "scripts/dtl_calculator.py"
 
 rule dtppi_calculation:
     input:
         structures_dir=f"data/structures/{config['species']}",
         pesto_pred=f"data/ppi_predictions_output/{config['species']}/ppi_final_predictions.csv"
     output:
-        sum_dir=f"data/reports/{config['species']}/dtppi_summary",
+        sum_dir=directory(f"data/reports/{config['species']}/dtppi_summary"),
         dtppi_combined=f"data/dtppi/{config['species']}_all_interface_distances.csv"
     conda:
         "envs/python_env.yaml"
     script:
-        "scripts/dtppi-calculator.py"
+        "scripts/dtppi_calculator.py"
+
+rule all_features_merging:
+    input:
+        snv_annotated=f"data/species_info/{config['species']}/snv_annotated.tsv",
+        gene_annotated=f"data/species_info/{config['species']}/gene_annotated.tsv",
+        mapping=f"data/protein_ids/{config['species']}/combined_mapping.tsv",
+        rsa=f"data/rsa_output/{config['species']}/res_rsa.csv",
+        dtl=f"data/dtl/{config['species']}_fpocket_dtl_combined.csv",
+        dtppi=f"data/dtppi/{config['species']}_all_interface_distances.csv"
+    output:
+        combined=f"data/merged_features/{config['species']}/snv_structural_features_merged.tsv"
+    conda:
+        "envs/python_env.yaml"
+    script:
+        "scripts/all_features_merger.py"
+
