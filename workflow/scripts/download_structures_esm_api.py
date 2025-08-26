@@ -8,6 +8,7 @@ report_dir = snakemake.output.report_dir  # Folder for pLDDT scores file
 plddt_threshold = snakemake.params.plddt_threshold  # Keep this as a float (0–1 scale)
 
 os.makedirs(output_folder, exist_ok=True)
+os.makedirs(report_dir, exist_ok=True)
 
 plddt_output_file = os.path.join(report_dir, "pLDDT_scores.tsv")
 
@@ -39,6 +40,7 @@ available = 0
 downloaded = 0
 skipped = 0
 failed = 0
+plddt_threshold = plddt_threshold / 100 #  scale the threshold (0-1)
 
 # Add basic headers to prevent potential 403s
 headers = {"User-Agent": "Mozilla/5.0"}

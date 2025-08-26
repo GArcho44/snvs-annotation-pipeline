@@ -1,13 +1,24 @@
+# Pipeline Snakefile: microbial SNVs → structure features (AFDB/ESM, RSA, DTL, DTPPI)
+# Author: Archontis Goumagias
+
+# Define config file location
 configfile: "../config/config.yml"
 
-
+#####################################
+#### RULE ALL: Full pipeline run ####
+#####################################
 rule all:
     input:
-        f"data/dtppi/{config['species']}_all_interface_distances.csv",
-        f"data/dtl/{config['species']}_fpocket_dtl_combined.csv",
-        f"data/rsa_output/{config['species']}/res_rsa.csv"
+        f"data/dtppi/{config['species']}/{config['species']}_pesto_dtppi_combined.csv",
+        f"data/dtl/{config['species']}/{config['species']}_fpocket_dtl_combined.csv",
+        f"data/rsa_output/{config['species']}/{config['species']}_dssp_rsa_combined.csv",
+        f"data/merged_features/{config['species']}/snv_structural_features_merged.tsv",
+        f"data/reports/{config['species']}/coverage_summary.png"
 
 
+#################################################################################################
+#### RULE 1: Retrieve species-level information: SNVs, Genes annotations + protein sequences ####
+#################################################################################################
 rule filter_species_snvs:
     input:
         snvs_tsv=config["snvs_annotation"],
@@ -19,11 +30,16 @@ rule filter_species_snvs:
         snv_annotated=f"data/species_info/{config['species']}/snv_annotated.tsv",
         gene_annotated=f"data/species_info/{config['species']}/gene_annotated.tsv",
         protein_fasta_filtered=f"data/species_info/{config['species']}/protein_sequences.fasta"
+    log:
+        f"logs/{config['species']}/filter_species_info.log"
     conda:
         "envs/python_env.yaml"
     script:
         "scripts/species_info_filter.py"
 
+###################################################################################################
+#### RULE 2: Retrieve UniProtKB IDs based on BLASTP top-1 hits of query sequences against AFDB ####
+###################################################################################################
 rule diamond_blastp_afdb:
     input:
         db=config["afdb_diamond_db"],
@@ -32,7 +48,7 @@ rule diamond_blastp_afdb:
         results=f"data/blastp/{config['species']}/blastp_afdb_top1.m8"
     log:
         f"logs/{config['species']}/diamond_blastp_afdb.log"
-    threads: 8
+    threads: 1
     conda:
         "envs/diamond.yaml"
     shell:
@@ -46,6 +62,9 @@ rule diamond_blastp_afdb:
             --fast 2> {log}
         """
 
+########################################################################################################
+#### RULE 3: Retrieve MGnify IDs based on BLASTP top-1 hits of query sequences against ESM atlas db ####
+########################################################################################################
 rule diamond_blastp_esm:
     input:
         db=config["esm_diamond_db"],
@@ -54,7 +73,7 @@ rule diamond_blastp_esm:
         results=f"data/blastp/{config['species']}/blastp_esm_top1.m8"
     log:
         f"logs/{config['species']}/diamond_blastp_esm.log"
-    threads: 8
+    threads: 1
     conda:
         "envs/diamond.yaml"
     shell:
@@ -68,6 +87,9 @@ rule diamond_blastp_esm:
             --fast 2> {log}
         """
 
+#########################################################################################################
+#### RULE 4: Process BLASTP results from AFDB and ESM atlas db along with UniRef100 gene annotations ####
+#########################################################################################################
 rule blast_results_processing:
     input:
         afdb_blast=f"data/blastp/{config['species']}/blastp_afdb_top1.m8",
@@ -78,17 +100,24 @@ rule blast_results_processing:
         esm_ids=f"data/protein_ids/{config['species']}/esm_ids.txt",
         combined=f"data/protein_ids/{config['species']}/combined_mapping.tsv",
         method_plot=f"data/reports/{config['species']}/blastp/method_distribution.png"
+    log:
+        f"logs/{config['species']}/blastp_processing.log"
     conda:
         "envs/python_env.yaml"
     script:
         "scripts/blastp_results_filter.py"
 
+###########################################################################################
+#### RULE 5: Download HQ structures from AFDB with UniProtKB IDs (RULE: 4) & using API ####
+###########################################################################################
 rule download_afdb_models:
     input:
         ids=f"data/protein_ids/{config['species']}/afdb_ids.txt"
     output:
         structures_dir=directory(f"data/structures_raw/{config['species']}/afdb"),
         report_dir=directory(f"data/reports/{config['species']}/afdb_report")
+    log:
+        f"logs/{config['species']}/download_afdb_models.log"
     params:
         threshold=config.get("plddt_threshold", 80)  # default 80
     conda:
@@ -96,12 +125,17 @@ rule download_afdb_models:
     script:
         "scripts/download_structures_afdb_api.py"
 
+###########################################################################################
+#### RULE 6: Download HQ structures from ESM atlas with MGnify IDs (RULE: 4) using API ####
+###########################################################################################
 rule download_esm_models:
     input:
         ids=f"data/protein_ids/{config['species']}/esm_ids.txt"
     output:
         structures_dir=directory(f"data/structures_raw/{config['species']}/esm"),
         report_dir=directory(f"data/reports/{config['species']}/esm_report")
+    log:
+        f"logs/{config['species']}/download_esm_models.log"
     params:
         plddt_threshold=config.get("plddt_threshold", 80)  # default 80
     conda:
@@ -109,65 +143,85 @@ rule download_esm_models:
     script:
         "scripts/download_structures_esm_api.py"
 
+######################################################################################################
+#### RULE 7: Move AFDB & ESM structure files into a single species directory for downstream steps ####
+######################################################################################################
 rule merge_structures:
     input:
         afdb_dir=f"data/structures_raw/{config['species']}/afdb",
         esm_dir=f"data/structures_raw/{config['species']}/esm"
     output:
         merged_dir=directory(f"data/structures/{config['species']}")
+    log:
+        f"logs/{config['species']}/merge_structures.log"
     shell:
         """
         mkdir -p {output.merged_dir}
         mv {input.afdb_dir}/* {output.merged_dir}/ || true
         mv {input.esm_dir}/* {output.merged_dir}/ || true
+        echo "Rule #7 successfully completed!"
         """
 
+####################################################################################
+#### RULE 8: Run DSSP per structure for secondary structure features assignment ####
+####################################################################################
 rule dssp:
     input:
         structures_dir=f"data/structures/{config['species']}"
     output:
-        dssp_dir=directory(f"data/dssp_output/{config['species']}"),
+        dssp_dir=temp(directory(f"data/dssp_output/{config['species']}")),
     conda:
         "envs/dssp_env.yaml"
     log:
-        "logs/dssp.log"
+        f"logs/{config['species']}/dssp.log"
     script:
         "scripts/dssp_generator.py"
 
+#################################################################################################
+#### RULE 9: Calculate RSA values per residue per structure and save them into a single file ####
+#################################################################################################
 rule rsa_calculation:
     input:
         dssp_dir=f"data/dssp_output/{config['species']}"
     output:
-        rsa=f"data/rsa_output/{config['species']}/res_rsa.csv"
+        rsa=f"data/rsa_output/{config['species']}/{config['species']}_dssp_rsa_combined.csv"
     conda:
         "envs/python_env.yaml"
     log:
-        "logs/rsa_calc.log"
+        f"logs/{config['species']}/rsa_calculation.log"
     script:
         "scripts/rsa_calculator.py"
 
+###########################################################################################
+#### RULE 10: Create list of relative paths of structures inside P2Rank tool directory ####
+###########################################################################################
 rule create_structures_list:
     input:
         structures_dir=f"data/structures/{config['species']}"
     output:
-        structures_list="tools/p2rank_2.5/structures_list"
+        structures_list=temp(f"tools/p2rank_2.5/{config['species']}/structures_list")
     log:
-        "logs/create_structures_list.log"
+        f"logs/{config['species']}/create_structures_list.log"
     shell:
         """
-        find {input.structures_dir} -name "*.pdb" | sed 's|^|../../|' > {output.structures_list}
+        find {input.structures_dir} -name "*.pdb" | sed 's|^|../../../|' > {output.structures_list}
+        echo "Rule #10 successfully completed!"
         """
 
+###########################################################
+#### RULE 11: Run P2Rank to predict pockets (OPTIONAL) ####
+###########################################################
 rule p2rank_prediction:
     input:
-        structures_list="tools/p2rank_2.5/structures_list"
+        structures_list=f"tools/p2rank_2.5/{config['species']}/structures_list"
     output:
-        predictions_dir=directory(f"data/p2rank_output/{config['species']}")
+        predictions_dir=temp(directory(f"data/p2rank_output/{config['species']}"))
     params:
         p2rank_dir="tools/p2rank_2.5",
-        threads=32
+        species=f"{config['species']}",
+        threads=8
     log:
-        "logs/p2rank.log"
+        f"logs/{config['species']}/p2rank.log"
     shell:
         """
         # Load Java module from HPC
@@ -175,22 +229,26 @@ rule p2rank_prediction:
 
         # Run P2Rank using the corrected path for the structures list
         cd {params.p2rank_dir} && \
-        ./prank predict structures_list \
+        ./prank predict {params.species}/structures_list \
 	-visualizations 0 -threads {params.threads} -o ../../{output.predictions_dir}
         """
 
+##################################################################
+#### RULE 12: Run Fpocket (PRANK re-scored) to detect pockets ####
+##################################################################
 rule fpocket_prediction:
     input:
-        structures_list="tools/p2rank_2.5/structures_list"
+        structures_list=f"tools/p2rank_2.5/{config['species']}/structures_list"
     output:
-        predictions_dir=directory(f"data/fpocket_output/{config['species']}")
+        predictions_dir=temp(directory(f"data/fpocket_output/{config['species']}"))
     params:
         p2rank_dir="tools/p2rank_2.5",
-        threads=32
+        species=f"{config['species']}",
+        threads=1
     conda:
         "envs/fpocket_env.yaml"
     log:
-        "logs/fpocket_res.log"
+        f"logs/{config['species']}/fpocket_res.log"
     shell:
         """
         # Load Java module from HPC
@@ -198,10 +256,13 @@ rule fpocket_prediction:
 
         # Run fpocket and PRANK rescore
         cd {params.p2rank_dir} && \
-        ./prank fpocket-rescore structures_list \
-        -fpocket_keep_output 0 -visualizations 0 -threads 32 -o ../../{output.predictions_dir}
+        ./prank fpocket-rescore {params.species}/structures_list \
+        -fpocket_keep_output 0 -visualizations 0 -threads 1 -o ../../{output.predictions_dir}
         """
 
+############################################################################################
+#### RULE 13: Merge the output from the two pocket prediction/detection tools (OPTIONAL)####
+############################################################################################
 rule predictions_merger:
     input:
         p2rank_dir=f"data/p2rank_output/{config['species']}",
@@ -213,17 +274,20 @@ rule predictions_merger:
     script:
         "scripts/predictions_merger.py"
 
+############################################################################
+#### RULE 14: Predict protein-protein interaction interfaces with PeSTo ####
+############################################################################
 rule pesto_prediction:
     input:
         structures=f"data/structures/{config['species']}"
     output:
-        predictions_dir=directory(f"data/PeSTo_output/{config['species']}")
+        predictions_dir=temp(directory(f"data/pesto_output/{config['species']}"))
     params:
         pesto_dir="tools/PeSTo"
     conda:
         "envs/pesto_env.yaml"
     log:
-        "logs/pesto.log"
+        f"logs/{config['species']}/pesto.log"
     shell:
         """
         # Run PeSTo for PPI predictions
@@ -231,48 +295,62 @@ rule pesto_prediction:
         python apply_model.py ../../{input.structures} ../../{output.predictions_dir}
         """
 
+########################################################################
+#### RULE 15: Merge PPI scores for all proteins into a single file #####
+########################################################################
 rule ppi_scores_merger:
     input:
-        pesto_dir=f"data/PeSTo_output/{config['species']}"
+        pesto_dir=f"data/pesto_output/{config['species']}"
     output:
-        merged_data=f"data/ppi_predictions_output/{config['species']}/ppi_final_predictions.csv"
+        merged_data=f"data/ppi_predictions_output/{config['species']}/{config['species']}_ppi_predictions.csv"
+    log:
+        f"logs/{config['species']}/ppi_merging.log"
     conda:
         "envs/python_env.yaml"
     script:
         "scripts/ppi_merger.py"
 
+################################################################################################
+#### RULE 16: Calculate Distance to Ligand (DTL) based on Fpocket (PRANK re-scored) output #####
+################################################################################################
 rule dtl_calculation:
     input:
         structures_dir=f"data/structures/{config['species']}",
         fpocket_dir=f"data/fpocket_output/{config['species']}"
     output:
-        dtl_dir=directory(f"data/dtl/{config['species']}"),
-        dtl_combined=f"data/dtl/{config['species']}_fpocket_dtl_combined.csv"
+        dtl_dir=temp(directory(f"data/reports/{config['species']}/dtl_summary")),
+        dtl_combined=f"data/dtl/{config['species']}/{config['species']}_fpocket_dtl_combined.csv"
     conda:
         "envs/python_env.yaml"
     script:
         "scripts/dtl_calculator.py"
 
+#################################################################################################
+#### RULE 17: Calculate Distance to Protein-protein Interface (DTPPI) based on PeSTo output #####
+#################################################################################################
 rule dtppi_calculation:
     input:
         structures_dir=f"data/structures/{config['species']}",
-        pesto_pred=f"data/ppi_predictions_output/{config['species']}/ppi_final_predictions.csv"
+        pesto_pred=f"data/ppi_predictions_output/{config['species']}/{config['species']}_ppi_predictions.csv"
     output:
-        sum_dir=directory(f"data/reports/{config['species']}/dtppi_summary"),
-        dtppi_combined=f"data/dtppi/{config['species']}_all_interface_distances.csv"
+        sum_dir=temp(directory(f"data/reports/{config['species']}/dtppi_summary")),
+        dtppi_combined=f"data/dtppi/{config['species']}/{config['species']}_pesto_dtppi_combined.csv"
     conda:
         "envs/python_env.yaml"
     script:
         "scripts/dtppi_calculator.py"
 
+################################################################################
+#### RULE 18: Merge all the information to create final table (per species) ####
+################################################################################
 rule all_features_merging:
     input:
         snv_annotated=f"data/species_info/{config['species']}/snv_annotated.tsv",
         gene_annotated=f"data/species_info/{config['species']}/gene_annotated.tsv",
         mapping=f"data/protein_ids/{config['species']}/combined_mapping.tsv",
-        rsa=f"data/rsa_output/{config['species']}/res_rsa.csv",
-        dtl=f"data/dtl/{config['species']}_fpocket_dtl_combined.csv",
-        dtppi=f"data/dtppi/{config['species']}_all_interface_distances.csv"
+        rsa=f"data/rsa_output/{config['species']}/{config['species']}_dssp_rsa_combined.csv",
+        dtl=f"data/dtl/{config['species']}/{config['species']}_fpocket_dtl_combined.csv",
+        dtppi=f"data/dtppi/{config['species']}/{config['species']}_pesto_dtppi_combined.csv"
     output:
         combined=f"data/merged_features/{config['species']}/snv_structural_features_merged.tsv"
     conda:
@@ -280,3 +358,21 @@ rule all_features_merging:
     script:
         "scripts/all_features_merger.py"
 
+######################################################
+#### RULE 19: Visualize information (per species) ####
+######################################################
+rule plot_gene_structural_coverage:
+    input:
+        merged = f"data/merged_features/{config['species']}/snv_structural_features_merged.tsv",
+        gene_counts = "data/species_genes_overall/code_counts.tsv"
+    output:
+        plot=f"data/reports/{config['species']}/coverage_summary.png"
+    conda:
+        "envs/python_env.yaml"
+    script:
+        "scripts/visual_generator.py"
+
+
+###################################
+#### END OF PIPELINE SNAKEFILE ####
+###################################

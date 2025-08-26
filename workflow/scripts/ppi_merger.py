@@ -3,12 +3,15 @@ import csv
 import logging
 from collections import defaultdict
 
+# Read log file location
+log_file = snakemake.log[0]
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("logs/pesto_conversion.log"),
+        logging.FileHandler(log_file),
         logging.StreamHandler()
     ]
 )

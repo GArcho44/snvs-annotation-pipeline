@@ -9,13 +9,15 @@ from collections import defaultdict, Counter
 from threading import Lock
 from Bio.PDB.MMCIFParser import MMCIFParser
 
+# Read log file location
+log_file = snakemake.log[0]
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("alphafold_script.log"),
+        logging.FileHandler(log_file),
         logging.StreamHandler()
     ]
 )
