@@ -19,7 +19,7 @@ These features are combined to infer the potential functional impact of each SNV
 *An overview of the pipeline is shown below.*
 
 <p align="center">
-  <img src="docs/images/snv-annotation-pipeline-v1.2.png" alt="Workflow overview" width="800">
+  <img src="docs/images/snv-annotation-pipeline-v1.2-git.png" alt="Workflow overview" width="800">
 </p>
 
 - [Snakemake workflow: `microbial-snvs-annotation-pipeline`](#snakemake-workflow-name)
