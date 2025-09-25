@@ -16,18 +16,18 @@ It integrates standard metagenomic outputs (SNVs + gene annotations) with high-q
 
 These features are combined to infer the potential functional impact of each SNV.
 
-*An overview of the pipeline is shown below.*
-
-<p align="center">
-  <img src="docs/images/snv-annotation-pipeline-v1.2-git.png" alt="Workflow overview" width="800">
-</p>
-
-- [Snakemake workflow: `microbial-snvs-annotation-pipeline`](#snakemake-workflow-name)
+- [Snakemake workflow: `microbial-snvs-annotation-pipeline`](#Workflow-Overview)
   - [Usage](#usage)
   - [Deployment options](#deployment-options)
   - [Authors](#authors)
   - [References](#references)
   - [TODO](#todo)
+
+## Workflow Overview
+
+<p align="center">
+  <img src="docs/images/snv-annotation-pipeline-v1.2-git.png" alt="Workflow overview" width="800">
+</p>
 
 ## Usage
 
