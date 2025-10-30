@@ -21,7 +21,6 @@ These features are combined to infer the potential functional impact of each SNV
   - [Deployment options](#deployment-options)
   - [Authors](#authors)
   - [References](#references)
-  - [TODO](#todo)
 
 ## Workflow Overview
 
