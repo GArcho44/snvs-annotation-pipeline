@@ -1,8 +1,9 @@
 # microbial-snvs-annotation-pipeline
 
 [![Snakemake](https://img.shields.io/badge/snakemake-≥8.0.0-brightgreen.svg)](https://snakemake.github.io)
-[![GitHub actions status](https://github.com/GArcho44/snvs-annotation-pipeline/workflows/Tests/badge.svg?branch=main)](https://github.com/GArcho44/snvs-annotation-pipeline/actions?query=branch%3Amain+workflow%3ATests)
+![Static Badge](https://img.shields.io/badge/under-development-green)
 [![run with conda](http://img.shields.io/badge/run%20with-conda-3EB049?labelColor=000000&logo=anaconda)](https://docs.conda.io/en/latest/)
+[![GitHub actions status](https://github.com/GArcho44/snvs-annotation-pipeline/workflows/Tests/badge.svg?branch=main)](https://github.com/GArcho44/snvs-annotation-pipeline/actions?query=branch%3Amain+workflow%3ATests)
 
 This Snakemake-based bioinformatics pipeline functionally annotates microbial single-nucleotide variants (SNVs) in protein-coding genes by leveraging protein-structure information.
 
