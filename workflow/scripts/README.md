@@ -1,4 +1,4 @@
-** Overview **
+# Overview
 
 This folder contains all auxiliary scripts used by the Snakemake workflow.
 Each script performs a specific processing, annotation, filtering, or computation step within the pipeline.
