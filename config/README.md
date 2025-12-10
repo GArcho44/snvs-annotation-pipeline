@@ -3,9 +3,9 @@
 This workflow is a best-practice workflow for `<structure-aware annotation of microbial SNPs>`.
 The workflow is built using [snakemake](https://snakemake.readthedocs.io/en/stable/) and consists of the following 3 main configurable modules:
 
-A. Sequence-based functional annotation of SNPs & Genes 
-B. retrieval of high-confidence structure models from AFDB and ESMatlas protein structure databases
-C. Measurement and prediction of structure-aware properties for protein residues affected from missense SNPs
+- A. Sequence-based functional annotation of SNPs & Genes 
+- B. retrieval of high-confidence structure models from AFDB and ESMatlas protein structure databases
+- C. Measurement and prediction of structure-aware properties for protein residues affected from missense SNPs
 
 ## Running the workflow
 
