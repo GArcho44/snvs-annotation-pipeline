@@ -4,28 +4,28 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 
 ## List of rules
 
-- [Rule 01: Retrieve species-level information including SNPs, Genes annotations and protein sequences](#smk_rule01)
-- [Rule 02: Retrieve UniProtKB IDs based on BLASTP top-1 hits of query sequences against AFDB](#smk_rule02)
-- [Rule 03: Retrieve MGnify IDs based on BLASTP top-1 hits of query sequences against ESM atlas database](#smk_rule03)
-- [Rule 04: Process BLASTP results from AFDB and ESM atlas databases](#smk_rule04)
-- [Rule 05: Download HQ structures from AFDB with UniProtKB IDs using APIs](#smk_rule05)
-- [Rule 06: Download HQ structures from ESM atlas with MGnify IDs using APIs](#smk_rule06)
-- [Rule 07: Move AFDB & ESM structure files into a single directory for downstream steps](#smk_rule07)
-- [Rule 08: Run DSSP per structure for secondary structure features assignment](#smk_rule08)
-- [Rule 09: Calculate RSA values per residue per structure and save them into a single file](#smk_rule09)
-- [Rule 10: Create list of relative paths of structures inside P2Rank tool directory](#smk_rule10)
-- [Rule 11: Run P2Rank to predict pockets](#smk_rule11)
-- [Rule 12: Fpocket (PRANK re-scored) to detect pockets](#smk_rule12)
-- [Rule 13: Merge the output from the two pocket prediction/detection tools](#smk_rule13)
-- [Rule 14: Predict protein-protein interaction interfaces with PeSTo](#smk_rule14)
-- [Rule 15: Merge PPI scores for all proteins](#smk_rule15)
-- [Rule 16: Calculate Distance to Ligand (DTL) based on Fpocket (PRANK re-scored) output](#smk_rule16)
-- [Rule 17: Calculate Distance to Protein-protein Interface (DTPPI) based on PeSTo output](#smk_rule17)
-- [Rule 18: Merge all the information](#smk_rule18)
-- [Rule 19: Visualize information](#smk_rule19)
+- [Rule 01: Retrieve species-level information including SNPs, Genes annotations and protein sequences](#rule-01-retrieve-species-level-information-including-snps-genes-annotations-and-protein-sequences)
+- [Rule 02: Retrieve UniProtKB IDs based on BLASTP top-1 hits of query sequences against AFDB](#rule-02-retrieve-uniprotkb-ids-based-on-blastp-top-1-hits-of-query-sequences-against-afdb)
+- [Rule 03: Retrieve MGnify IDs based on BLASTP top-1 hits of query sequences against ESM atlas database](#rule-03-retrieve-mgnify-ids-based-on-blastp-top-1-hits-of-query-sequences-against-esm-atlas-database)
+- [Rule 04: Process BLASTP results from AFDB and ESM atlas databases](#rule-04-process-blastp-results-from-afdb-and-esm-atlas-databases)
+- [Rule 05: Download HQ structures from AFDB with UniProtKB IDs using APIs](#rule-05-download-hq-structures-from-afdb-with-uniprotkb-ids-using-apis)
+- [Rule 06: Download HQ structures from ESM atlas with MGnify IDs using APIs](#rule-06-download-hq-structures-from-esm-atlas-with-mgnify-ids-using-apis)
+- [Rule 07: Move AFDB & ESM structure files into a single directory for downstream steps](#rule-07-move-afdb--esm-structure-files-into-a-single-directory-for-downstream-steps)
+- [Rule 08: Run DSSP per structure for secondary structure features assignment](#rule-08-run-dssp-per-structure-for-secondary-structure-features-assignment)
+- [Rule 09: Calculate RSA values per residue per structure and save them into a single file](#rule-09-calculate-rsa-values-per-residue-per-structure-and-save-them-into-a-single-file)
+- [Rule 10: Create list of relative paths of structures inside P2Rank tool directory](#rule-10-create-list-of-relative-paths-of-structures-inside-p2rank-tool-directory)
+- [Rule 11: Run P2Rank to predict pockets](#rule-11-run-p2rank-to-predict-pockets)
+- [Rule 12: Fpocket (PRANK re-scored) to detect pockets](#rule-12-fpocket-prank-re-scored-to-detect-pockets)
+- [Rule 13: Merge the output from the two pocket prediction/detection tools](#rule-13-merge-the-output-from-the-two-pocket-predictiondetection-tools)
+- [Rule 14: Predict protein-protein interaction interfaces with PeSTo](#rule-14-predict-protein-protein-interaction-interfaces-with-pesto)
+- [Rule 15: Merge PPI scores for all proteins](#rule-15-merge-ppi-scores-for-all-proteins)
+- [Rule 16: Calculate Distance to Ligand (DTL) based on Fpocket (PRANK re-scored) output](#rule-16-calculate-distance-to-ligand-dtl-based-on-fpocket-prank-re-scored-output)
+- [Rule 17: Calculate Distance to Protein-protein Interface (DTPPI) based on PeSTo output](#rule-17-calculate-distance-to-protein-protein-interface-dtppi-based-on-pesto-output)
+- [Rule 18: Merge all the information](#rule-18-merge-all-the-information)
+- [Rule 19: Visualize information](#rule-19-visualize-information)
 
-## Rule 01: Retrieve species-level information including SNPs, Genes annotations and protein sequences {#smk_rule01}
 
+## Rule 01: Retrieve species-level information including SNPs, Genes annotations and protein sequences 
 **Input**
 - **snps_tsv**: the SNP annotation file generated with SnpEff
 - **genes_tsv**: the Genes annotation file generated with bakta
@@ -38,7 +38,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 - **genes_annotated**: species filtered annotated genes
 - **protein_fasta_filtered**: species filtered protein sequences
 
-## Rule 02: Retrieve UniProtKB IDs based on BLASTP top-1 hits of query sequences against AFDB {#smk_rule02}
+## Rule 02: Retrieve UniProtKB IDs based on BLASTP top-1 hits of query sequences against AFDB 
 
 **Input**
 - **db**: the AFDB Diamond database to be used as reference
@@ -47,7 +47,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 **Output**
 - **blastp_results**: Diamond BLASTP results of top-1 hit per protein sequence for AFDB
 
-## Rule 03: Retrieve MGnify IDs based on BLASTP top-1 hits of query sequences against ESM atlas database {#smk_rule03}
+## Rule 03: Retrieve MGnify IDs based on BLASTP top-1 hits of query sequences against ESM atlas database 
 
 **Input**
 - **db**: the AFDB Diamond database to be used as reference
@@ -56,7 +56,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 **Output**
 - **blastp_results**: Diamond BLASTP results of top-1 hit per protein sequence for AFDB
 
-## Rule 04: Process BLASTP results from AFDB and ESM atlas databases {#smk_rule04}
+## Rule 04: Process BLASTP results from AFDB and ESM atlas databases 
 
 **Input**
 - **afdb_blast**: Diamond BLASTP results of top-1 hit per protein sequence for AFDB
@@ -69,7 +69,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 - **combined_results**: Combined BLASTP results with best hit per query sequence based on pre-defined criteria (sequence identity, full length alignment and AFDB priority)
 - **method_plot**: summary plot of the distribution per method and database
 
-## Rule 05: Retrieve Download HQ structures from AFDB with UniProtKB IDs using APIs {#smk_rule05}
+## Rule 05: Retrieve Download HQ structures from AFDB with UniProtKB IDs using APIs 
 **Input**
 - **ids**: UniProtKB IDs of the protein sequences
 
@@ -77,7 +77,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 - **structures_dir**: directory that contains all the downloaded HQ protein models from AFDB
 - **report_dir**: directory that contains pLDDT confidence scores information per downloaded protein & per protein residue
 
-## Rule 06: Download HQ structures from ESM atlas with MGnify IDs using APIs {#smk_rule06}
+## Rule 06: Download HQ structures from ESM atlas with MGnify IDs using APIs 
 
 **Input**
 - **ids**: UniProtKB IDs of the protein sequences
@@ -86,7 +86,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 - **structures_dir**: directory that contains all the downloaded HQ protein models from AFDB
 - **report_dir**: directory that contains pLDDT confidence scores information per downloaded protein & per protein residue
 
-## Rule 07: Move AFDB & ESM structure files into a single directory for downstream steps {#smk_rule07}
+## Rule 07: Move AFDB & ESM structure files into a single directory for downstream steps 
 
 **Input**
 - **afdb_dir**: directory that contains all the downloaded HQ protein models from AFDB
@@ -95,7 +95,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 **Output**
 - **merged_dir**: directory that contains all the downloaded HQ protein models (AFDB + ESMatlas)
 
-## Rule 08: Run DSSP per structure for secondary structure features assignment {#smk_rule08}
+## Rule 08: Run DSSP per structure for secondary structure features assignment 
 
 **Input**
 - **structures_dir**: directory that contains all the downloaded HQ protein models (AFDB + ESMatlas)
@@ -103,7 +103,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 **Output**
 - **dsspi_dir**: directory with the dssp secondary structure features assignments per protein structure
 
-## Rule 09: Calculate RSA values per residue per structure and save them into a single file {#smk_rule09}
+## Rule 09: Calculate RSA values per residue per structure and save them into a single file 
 
 **Input**
 - **dsspi_dir**: directory with the dssp secondary structure features assignments per protein structure
@@ -111,7 +111,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 **Output**
 - **rsa**: single file containing secondary elements assignment and calculated RSA per residue per structure
 
-## Rule 10: Create list of relative paths of structures inside P2Rank tool directory {#smk_rule10}
+## Rule 10: Create list of relative paths of structures inside P2Rank tool directory 
 
 **Input**
 - **structures_dir**: directory that contains all the downloaded HQ protein models (AFDB + ESMatlas)
@@ -119,7 +119,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 **Output**
 - **structures_list**: A list of relative paths for the structures inside the P2Rank directory
 
-## Rule 11: Run P2Rank to predict pockets {#smk_rule11}
+## Rule 11: Run P2Rank to predict pockets 
 
 **Input**
 - **structures_list**: A list of relative paths for the structures inside the P2Rank directory
@@ -127,7 +127,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 **Output**
 - **predictions_dir**: directory that contains P2Rank predictions output
 
-## Rule 12: Fpocket (PRANK re-scored) to detect pockets {#smk_rule12}
+## Rule 12: Fpocket (PRANK re-scored) to detect pockets 
 
 **Input**
 - **structures_list**: A list of relative paths for the structures inside the P2Rank directory
@@ -135,7 +135,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 **Output**
 - **predictions_dir**: directory that contains Fpocket (PRANK re-scored) predictions output
 
-## Rule 13: Merge the output from the two pocket prediction/detection tools {#smk_rule13}
+## Rule 13: Merge the output from the two pocket prediction/detection tools 
 
 **Input**
 - **p2rank_dir**: directory that contains P2Rank predictions output 
@@ -144,7 +144,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 **Output**
 - **merged_data**: file that contains P2Rank and Fpocket (PRANK re-scored) predictions merged
 
-## Rule 14: Predict protein-protein interaction interfaces with PeSTo {#smk_rule14}
+## Rule 14: Predict protein-protein interaction interfaces with PeSTo
 
 **Input**
 - **structures_dir**: directory that contains all the downloaded HQ protein models (AFDB + ESMatlas)
@@ -152,14 +152,14 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 **Output**
 - **predictions_dir**: directory that contains PeSTo predictions output
 
-## Rule 15: Merge PPI scores for all proteins {#smk_rule15}
+## Rule 15: Merge PPI scores for all proteins 
 **Input**
 - **pesto_dir**: directory that contains PeSTo predictions output
 
 **Output**
 - **merged_data**: PPI predictions for all proteins in a single file to be used for DTPPI calculations
 
-## Rule 16: Calculate Distance to Ligand (DTL) based on Fpocket (PRANK re-scored) output {#smk_rule16}
+## Rule 16: Calculate Distance to Ligand (DTL) based on Fpocket (PRANK re-scored) output 
 
 **Input**
 - **structures_dir**: directory that contains all the downloaded HQ protein models (AFDB + ESMatlas)
@@ -169,7 +169,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 - **dtl_dir**: directory of per protein DTL calculations
 - **dtl_combined**: file of combined DTL calculations per residue per protein structure for all proteins with detected pockets
 
-## Rule 17: Calculate Distance to Protein-protein Interface (DTPPI) based on PeSTo output {#smk_rule17}
+## Rule 17: Calculate Distance to Protein-protein Interface (DTPPI) based on PeSTo output
 
 **Input**
 - **structures_dir**: directory that contains all the downloaded HQ protein models (AFDB + ESMatlas)
@@ -179,7 +179,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 - **dtppi_dir**: directory of per protein DTPPI calculations
 - **dtppi_combined**: file of combined DTPPI calculations per residue per protein structure for all proteins with detected interfaces
 
-## Rule 18: Merge all the information {#smk_rule18}
+## Rule 18: Merge all the information 
 
 **Input**
 - **snps_annotated**: species filtered annotated snps
@@ -193,7 +193,7 @@ The Snakefile (snakemake workflow) includes 19 rules in total (see list below).
 - **dtppi_dir**: directory of per protein DTPPI calculations
 - **combined**: Single file that contains all generated information per SNP
 
-## Rule 19: Visualize information {#smk_rule19}
+## Rule 19: Visualize information 
 **Input**
 - **merged**: Single file that contains all generated information per SNP
 - **gene_counts**: file containing information about the number of unique genes per species
