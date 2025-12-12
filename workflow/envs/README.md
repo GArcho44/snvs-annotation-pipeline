@@ -6,7 +6,7 @@ This folder contains **Conda environments** used by the workflow. Each environme
 - In the pipeline, Snakemake activates environments per rule via  
   `conda: "envs/<env>.yaml"`.
 
-## Table 1 — Environments and usage
+## Table 1 - Environments and usage
 
 | Environment name   | Rules IDs activated                         | Key packages |
 |--------------------|---------------------------------------------|--------------|
