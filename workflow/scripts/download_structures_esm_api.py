@@ -45,6 +45,20 @@ plddt_threshold = plddt_threshold / 100 #  scale the threshold (0-1)
 # Add basic headers to prevent potential 403s
 headers = {"User-Agent": "Mozilla/5.0"}
 
+# Check valid format of pdb file
+def pdb_like_valid(path, min_bytes=500):
+    # reject missing/very small files
+    if not os.path.isfile(path) or os.path.getsize(path) < min_bytes:
+        return False
+    # accept if we see atom records (PDB or mmCIF style)
+    with open(path, "r", encoding="utf-8", errors="ignore") as fh:
+        for i, line in enumerate(fh):
+            if line.startswith("ATOM") or line.startswith("HETATM") or "_atom_site." in line:
+                return True
+            if i > 50000:  # don't scan forever
+                break
+    return False
+
 # Main loop
 for mgyp_id in mgyp_ids:
     try:
@@ -70,6 +84,16 @@ for mgyp_id in mgyp_ids:
             pdb_path = os.path.join(output_folder, f"{mgyp_id}.pdb")
             with open(pdb_path, "w") as f:
                 f.write(struct_response.text)
+
+            # QC: delete if headers-only/empty so AFDB can be used downstream ---
+            if not pdb_like_valid(pdb_path):
+                try:
+                    os.remove(pdb_path)
+                except OSError:
+                    pass
+                print(f"[WARN] Invalid/empty ESM PDB for {mgyp_id}; removed. AFDB will be used if available.")
+                skipped += 1
+                continue
 
             # Save pLDDT per residue
             with open(plddt_output_file, "a") as pf:

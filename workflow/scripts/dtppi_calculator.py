@@ -191,6 +191,8 @@ def batch_interface_distance(structure_dir, pesto_csv_path, output_dir, combined
         protein_id = os.path.splitext(os.path.basename(pdb_file))[0]
         output_file = os.path.join(output_dir, f"{protein_id}.csv")
 
+        os.makedirs(output_dir, exist_ok=True)  # ensure summary dir always exists
+
         interface_residues, cluster_summaries, res_to_cluster = group_interface_residues(pdb_file, pred_df, protein_id)
 
         if not interface_residues:
@@ -200,7 +202,6 @@ def batch_interface_distance(structure_dir, pesto_csv_path, output_dir, combined
         try:
             df = calculate_interface_distance(protein_id, pdb_file, interface_residues, res_to_cluster)
             if df is not None:
-                os.makedirs(output_dir, exist_ok=True)
                 df.to_csv(output_file, index=False)
                 print(f"[✓] {protein_id} → {output_file}")
                 all_data.append(df)
@@ -209,6 +210,9 @@ def batch_interface_distance(structure_dir, pesto_csv_path, output_dir, combined
                 print(f"[!] {protein_id}: No distances calculated.")
         except Exception as e:
             print(f"[!] Error processing {protein_id}: {e}")
+
+    # create the directory of output
+    os.makedirs(os.path.dirname(combined_output_file), exist_ok=True)
 
     if all_data:
         combined_residue_df = pd.concat(all_data, ignore_index=True)
@@ -225,9 +229,14 @@ def batch_interface_distance(structure_dir, pesto_csv_path, output_dir, combined
             cluster_summary_df,
             on=["protein_id", "cluster_id"],
             how="left")
-        os.makedirs(os.path.dirname(combined_output_file), exist_ok=True)
         merged_df.to_csv(combined_output_file, index=False)
         print(f"[✓] Combined distances + summaries saved to: {combined_output_file}")
+
+    else:
+        # write an empty CSV with headers so Snakemake sees the declared output
+        empty_cols = ["protein_id", "chain_id", "residue_id", "DTPPI", "normalized_DTPPI"]
+        pd.DataFrame(columns=empty_cols).to_csv(combined_output_file, index=False)
+        print(f"[i] No interface distances; wrote empty file: {combined_output_file}")
 
     # Still write the separate cluster-summary file for convenience
     if not cluster_summary_df.empty:

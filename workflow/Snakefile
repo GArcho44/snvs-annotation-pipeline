@@ -93,13 +93,14 @@ rule diamond_blastp_esm:
 rule blast_results_processing:
     input:
         afdb_blast=f"data/blastp/{config['species']}/blastp_afdb_top1.m8",
-        esm_blast=f"data/blastp/{config['species']}/blastp_esm_top1.m8",
-        gene_annotation=f"data/species_info/{config['species']}/gene_annotated.tsv"
+        esm_blast=f"data/blastp/{config['species']}/blastp_esm_top1.m8"
     output:
         afdb_ids=f"data/protein_ids/{config['species']}/afdb_ids.txt",
         esm_ids=f"data/protein_ids/{config['species']}/esm_ids.txt",
         combined=f"data/protein_ids/{config['species']}/combined_mapping.tsv",
         method_plot=f"data/reports/{config['species']}/blastp/method_distribution.png"
+    params:
+        min_perc_identity=config.get("perc_identity_threshold", 98)  # default 98
     log:
         f"logs/{config['species']}/blastp_processing.log"
     conda:
