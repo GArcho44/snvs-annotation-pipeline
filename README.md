@@ -54,7 +54,7 @@ snakemake --dry-run
 
 - Archontis Goumagias
   - University of Groningen, University Medical Center Groningen, Department of Genetics/Pediatrics, Groningen, The Netherlands
-  - ORCID profile
+  - ORCID profile: https://orcid.org/0009-0007-1430-6210
 
 ## References
 
