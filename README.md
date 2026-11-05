@@ -11,7 +11,7 @@
 
 ## Workflow overview
 
-![proStAMP workflow overview](docs/images/proStAMP-v0.0.3.svg)
+![proStAMP workflow overview](docs/images/proStAMP-v0.0.3.png)
 
 The workflow comprises these steps:
 
@@ -26,7 +26,7 @@ The workflow comprises these steps:
 - **Relative solvent accessibility (RSA):** Degree of residue exposure to solvent.
 - **Ligand-binding pockets (LBP):** Candidate pocket locations identified by Fpocket and rescored by PRANK.
 - **Distance to ligand-binding pockets (DTLBP):** Minimum 3D distance from a residue to a selected predicted pocket center, in Å.
-- **Predicted protein–protein interaction interfaces:** Candidate interface regions inferred by PeSTo.
+- **Predicted protein–protein interaction interfaces (PPII):** Candidate interface regions inferred by PeSTo.
 - **Distance to protein–protein interaction interfaces (DTPPI):** 3D distance to selected predicted interface residues, in Å; residues assigned to an interface have DTPPI = 0.
 
 **Main output:** `data/merged_features/{species}/snv_structural_features_merged.tsv`
