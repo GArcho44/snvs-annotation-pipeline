@@ -89,6 +89,7 @@ def group_interface_residues(pdb_file, pred_df, protein_id):
         cluster_map.setdefault(label, []).append((res_id, conf))
 
     candidate_clusters = []
+    plddt_cutoff = 0.7 if protein_id.startswith("MGYP") else 70 # different scale of pLDDT for ESMatlas and AFDB
     for cluster in cluster_map.values():
         avg_conf = np.mean([c[1] for c in cluster])
         res_ids_cur = [c[0] for c in cluster]
@@ -96,7 +97,7 @@ def group_interface_residues(pdb_file, pred_df, protein_id):
             structure[0][rid[0]][(" ", rid[1], " ")]['CA'].get_bfactor()
             for rid in res_ids_cur
         ])
-        if (avg_conf > 0.8) and (avg_plddt > 70) and (len(cluster) >= 6):
+        if (avg_conf > 0.8) and (avg_plddt > plddt_cutoff) and (len(cluster) >= 6):
             candidate_clusters.append(set(res_ids_cur))
 
     merged_clusters = merge_overlapping_clusters(candidate_clusters.copy())

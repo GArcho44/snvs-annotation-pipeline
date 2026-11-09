@@ -1,19 +1,64 @@
 import os
 import glob
+import re
 import pandas as pd
 import numpy as np
 from Bio.PDB import PDBParser, is_aa
 
-def parse_fpocket_centers(file_path):
+
+def get_pocket_avg_plddt(model, residue_ids, is_mgyp=False):
+    plddts = []
+
+    # supports formats like A123, A:123, A_123, A-123, etc.
+    matches = re.findall(r'([A-Za-z0-9])[^0-9-]*(-?\d+)', str(residue_ids))
+
+    for chain_id, res_num in matches:
+        try:
+            residue = model[chain_id][(" ", int(res_num), " ")]
+        except KeyError:
+            continue
+
+        if "CA" in residue:
+            plddt = residue["CA"].get_bfactor()
+        else:
+            atom_bfactors = [atom.get_bfactor() for atom in residue]
+            if not atom_bfactors:
+                continue
+            plddt = np.mean(atom_bfactors)
+
+        # ESMatlas / MGnify use 0-1 instead of 0-100
+        if is_mgyp:
+            plddt *= 100.0
+
+        plddts.append(plddt)
+
+    return np.mean(plddts) if plddts else np.nan
+
+def parse_fpocket_centers(file_path, pdb_path, protein_id):
     headers = ["name", "rank", "score", "probability", "sas_points", "surf_atoms",
                "center_x", "center_y", "center_z", "residue_ids", "surf_atom_ids"]
     df = pd.read_csv(file_path, names=headers, skiprows=1)
 
+    parser = PDBParser(QUIET=True)
+    structure = parser.get_structure("model", pdb_path)
+    model = structure[0]
+
+    is_mgyp = protein_id.startswith("MGYP")
+
     # keep confident pockets only
-    df = df[df["probability"].astype(float) > 0.5].reset_index(drop=True)
+    df = df[df["probability"].astype(float) > 0.5].copy()
+    if df.empty:
+        return np.empty((0, 3)), pd.DataFrame(columns=headers), "no pockets passed probability > 0.5"
+
+    # additional filter: average pocket pLDDT > 70
+    df = df[
+        df["residue_ids"].apply(lambda x: get_pocket_avg_plddt(model, x, is_mgyp) > 70)
+    ].reset_index(drop=True)
+    if df.empty:
+        return np.empty((0, 3)), pd.DataFrame(columns=headers), "no pockets passed average pLDDT > 70"
 
     centers = df[["center_x", "center_y", "center_z"]].astype(float).values
-    return centers, df
+    return centers, df, None
 
 def get_sidechain_center(residue):
     sidechain_atoms = [atom for atom in residue if atom.get_name() not in ["N", "CA", "C", "O"]]
@@ -40,9 +85,10 @@ def calculate_dtl(protein_id, pdb_path, fpocket_path, output_path):
     all_coords, all_residues = extract_structure_coords(pdb_path)
 
     # Use only Fpocket pocket centers with probability > 0.5
-    binding_coords, pocket_df = parse_fpocket_centers(fpocket_path)
+    binding_coords, pocket_df, reason = parse_fpocket_centers(fpocket_path, pdb_path, protein_id)
     if len(binding_coords) == 0:
         binding_coords = np.empty((0, 3))
+        return None, reason
     else:
         binding_coords = np.vstack(binding_coords)
 
@@ -75,9 +121,9 @@ def calculate_dtl(protein_id, pdb_path, fpocket_path, output_path):
     if dtl_list:
         base_cols = ["protein_id", "chain_id", "residue_id", "DTL", "normalized_DTL"]
         df = pd.DataFrame(dtl_list, columns=base_cols + pocket_df.columns.tolist())
-        return df
+        return df, None
     else:
-        return None
+        return None, "no residues received a DTL value"
 
 def batch_dtl(structure_dir, fpocket_dir, output_dir, combined_output_file):
     pdb_files = glob.glob(os.path.join(structure_dir, "*.pdb"))
@@ -95,14 +141,14 @@ def batch_dtl(structure_dir, fpocket_dir, output_dir, combined_output_file):
             continue
 
         try:
-            df = calculate_dtl(protein_id, pdb_file, fpocket_file, per_protein_output_file)
+            df, reason = calculate_dtl(protein_id, pdb_file, fpocket_file, per_protein_output_file)
             if df is not None:
                 os.makedirs(output_dir, exist_ok=True)
                 df.to_csv(per_protein_output_file, index=False)
                 print(f"[✓] {protein_id} → {per_protein_output_file}")
                 all_dtl_data.append(df)
             else:
-                print(f"[!] {protein_id}: No DTL values calculated.")
+                print(f"[!] {protein_id}: No DTL values calculated ({reason}).")
         except Exception as e:
             print(f"[!] Error processing {protein_id}: {e}")
 

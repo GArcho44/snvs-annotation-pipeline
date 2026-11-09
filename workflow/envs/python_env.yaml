@@ -11,3 +11,4 @@ dependencies:
   - threadpoolctl  # For parallel execution with ThreadPoolExecutor
   - pandas
   - numpy
+  - scipy
